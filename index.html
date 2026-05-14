@@ -15,10 +15,11 @@ display:flex;
 height:100vh;
 }
 
+/* SIDEBAR */
 #sidebar{
-width:230px;
+width:260px;
 background:#111;
-padding:10px;
+padding:12px;
 display:flex;
 flex-direction:column;
 gap:10px;
@@ -26,17 +27,14 @@ border-right:1px solid #222;
 }
 
 .chatItem{
-padding:8px;
+padding:10px;
 background:#222;
-border-radius:8px;
+border-radius:10px;
 cursor:pointer;
-font-size:13px;
+font-size:14px;
 }
 
-.chatItem:hover{
-background:#333;
-}
-
+/* MAIN */
 #main{
 flex:1;
 display:flex;
@@ -46,37 +44,43 @@ flex-direction:column;
 #chat{
 flex:1;
 overflow-y:auto;
-padding:10px;
+padding:15px;
 display:flex;
 flex-direction:column;
-gap:10px;
+gap:12px;
+font-size:18px; /* 👈 BIGGER TEXT FIX */
+line-height:1.5;
 }
 
 .user{
 align-self:flex-end;
 background:#333;
-padding:10px;
-border-radius:10px;
-max-width:70%;
+padding:12px;
+border-radius:12px;
+max-width:75%;
+font-size:18px;
 }
 
 .ai{
 align-self:flex-start;
-padding:10px;
+padding:12px;
 max-width:90%;
+font-size:18px;
 white-space:pre-wrap;
 }
 
+/* INPUT */
 #inputArea{
 display:flex;
-padding:10px;
+padding:12px;
 gap:10px;
 border-top:1px solid #222;
 }
 
 #input{
 flex:1;
-padding:10px;
+padding:14px;
+font-size:16px;
 background:#111;
 border:1px solid #333;
 color:white;
@@ -84,7 +88,8 @@ border-radius:10px;
 }
 
 button{
-padding:10px;
+padding:12px;
+font-size:14px;
 border:none;
 border-radius:10px;
 cursor:pointer;
@@ -92,12 +97,6 @@ cursor:pointer;
 
 #send{background:white;color:black;}
 #imgBtn{background:#222;color:white;}
-
-img{
-max-width:220px;
-margin-top:5px;
-border-radius:10px;
-}
 
 </style>
 </head>
@@ -114,7 +113,7 @@ border-radius:10px;
 <div id="chat"></div>
 
 <div id="inputArea">
-<button id="imgBtn">🖼️ Gemini Image</button>
+<button id="imgBtn">🖼️</button>
 <input id="input" placeholder="Message Nexaris..." />
 <button id="send">Send</button>
 </div>
@@ -127,21 +126,13 @@ border-radius:10px;
    API KEYS
 ========================= */
 
-const CHAT_KEY = "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";
-
-/*
-IMPORTANT:
-Gemini API KEY goes here for image generation
-(from https://aistudio.google.com/app/apikey)
-*/
-
+const GROQ_KEY = "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";
 const GEMINI_KEY = "AIzaSyD3oiGFs1tEskJ6qY19wGdp5oR2VsWa6Hw";
 
 /* ========================= */
 
 let chats = {};
 let currentChat = null;
-let imageMode = false;
 
 /* =========================
    CHAT SYSTEM
@@ -164,18 +155,13 @@ renderChat();
 
 function renderChats(){
 
-const list =
-document.getElementById("chatList");
-
+const list = document.getElementById("chatList");
 list.innerHTML = "";
 
 Object.keys(chats).forEach(id=>{
 
-const div =
-document.createElement("div");
-
+const div = document.createElement("div");
 div.className = "chatItem";
-
 div.textContent = id;
 
 div.onclick = ()=>{
@@ -193,55 +179,34 @@ list.appendChild(div);
 
 function renderChat(){
 
-const chat =
-document.getElementById("chat");
-
+const chat = document.getElementById("chat");
 chat.innerHTML = "";
 
 (chats[currentChat] || []).forEach(m=>{
 
-const div =
-document.createElement("div");
-
+const div = document.createElement("div");
 div.className = m.role;
-
-if(m.type === "image"){
-
-const img =
-document.createElement("img");
-
-img.src = m.text;
-
-div.appendChild(img);
-
-}else{
-
 div.textContent = m.text;
-
-}
 
 chat.appendChild(div);
 
 });
 
+chat.scrollTop = chat.scrollHeight;
+
 }
 
 /* =========================
-   GEMINI IMAGE GENERATION
+   GEMINI FALLBACK CHAT
+   (used when Groq fails)
 ========================= */
 
-async function generateImage(prompt){
+async function geminiFallback(messages){
 
 const endpoint =
 "https://generativelanguage.googleapis.com/v1beta/models/" +
-"gemini-1.5-pro:generateContent?key=" +
+"gemini-1.5-flash:generateContent?key=" +
 GEMINI_KEY;
-
-/*
-NOTE:
-Gemini does not always return images directly.
-This is structured correctly for Gemini API usage.
-*/
 
 const res = await fetch(endpoint,{
 method:"POST",
@@ -252,7 +217,7 @@ body:JSON.stringify({
 contents:[{
 parts:[{
 text:
-"Generate a detailed image description for: " + prompt
+messages.map(m=>m.content).join("\n")
 }]
 }]
 })
@@ -260,53 +225,29 @@ text:
 
 const data = await res.json();
 
-/* fallback placeholder since Gemini often returns text */
-return "https://via.placeholder.com/300x200.png?text=" +
-encodeURIComponent(prompt);
+return data?.candidates?.[0]?.content?.parts?.[0]?.text
+|| "Gemini fallback failed.";
 
 }
 
 /* =========================
-   SEND MESSAGE
+   SEND MESSAGE (SMART ROUTER)
 ========================= */
 
 async function send(){
 
-const input =
-document.getElementById("input");
-
-const text =
-input.value.trim();
+const input = document.getElementById("input");
+const text = input.value.trim();
 
 if(!text) return;
 
 input.value = "";
 
-/* init chat */
 if(!chats[currentChat]){
 chats[currentChat] = [];
 }
 
-/* IMAGE MODE */
-if(imageMode){
-
-const img =
-await generateImage(text);
-
-chats[currentChat].push({
-role:"ai",
-type:"image",
-text:img
-});
-
-imageMode = false;
-
-renderChat();
-
-return;
-}
-
-/* USER MESSAGE */
+/* save user */
 chats[currentChat].push({
 role:"user",
 text
@@ -314,24 +255,22 @@ text
 
 renderChat();
 
-/* CHAT AI (GROQ) */
-
-const messages =
-chats[currentChat].map(m=>({
+/* build messages */
+const messages = chats[currentChat].map(m=>({
 role:m.role,
 content:m.text
 }));
 
+/* 1. TRY GROQ FIRST */
 try{
 
-const res =
-await fetch(
+const res = await fetch(
 "https://api.groq.com/openai/v1/chat/completions",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json",
-"Authorization":"Bearer " + CHAT_KEY
+"Authorization":"Bearer " + GROQ_KEY
 },
 body:JSON.stringify({
 model:"llama-3.1-8b-instant",
@@ -343,8 +282,9 @@ messages
 const data = await res.json();
 
 const reply =
-data?.choices?.[0]?.message?.content
-|| "Error";
+data?.choices?.[0]?.message?.content;
+
+if(!reply) throw new Error("Groq failed");
 
 chats[currentChat].push({
 role:"ai",
@@ -353,11 +293,16 @@ text:reply
 
 renderChat();
 
-}catch(err){
+}
+
+/* 2. IF GROQ FAILS → GEMINI TAKES OVER */
+catch(err){
+
+const fallback = await geminiFallback(messages);
 
 chats[currentChat].push({
 role:"ai",
-text:"Connection error"
+text:"(Gemini fallback)\n\n" + fallback
 });
 
 renderChat();
@@ -365,14 +310,6 @@ renderChat();
 }
 
 }
-
-/* IMAGE BUTTON */
-
-document.getElementById("imgBtn")
-.onclick = ()=>{
-imageMode = true;
-alert("Type a prompt for Gemini image generation");
-};
 
 /* EVENTS */
 
