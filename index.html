@@ -1,748 +1,52 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nexaris</title>
-
-<style>
-
-body{
-margin:0;
-font-family:Arial;
-background:#000;
-color:white;
-height:100vh;
-overflow:hidden;
-}
-
-/* SIDEBAR */
-
-#sidebar{
-position:fixed;
-top:0;
-left:0;
-width:260px;
-height:100%;
-background:#111;
-padding:10px;
-box-sizing:border-box;
-overflow-y:auto;
-transition:.3s;
-z-index:100;
-}
-
-#sidebar.hidden{
-transform:translateX(-100%);
-}
-
-/* MAIN */
-
-#main{
-position:absolute;
-left:260px;
-right:0;
-top:0;
-bottom:0;
-display:flex;
-flex-direction:column;
-transition:.3s;
-}
-
-#main.full{
-left:0;
-}
-
-/* TOGGLE */
-
-#toggleBtn{
-position:fixed;
-top:10px;
-left:270px;
-z-index:999;
-background:white;
-color:black;
-border:none;
-padding:6px 10px;
-border-radius:6px;
-cursor:pointer;
-transition:.3s;
-}
-
-/* BUTTONS */
-
-.sideBtn{
-width:100%;
-margin-top:8px;
-padding:10px;
-background:#222;
-color:white;
-border:none;
-border-radius:8px;
-cursor:pointer;
-}
-
-/* SEARCH */
-
-#search{
-width:100%;
-padding:10px;
-margin-top:10px;
-background:#111;
-color:white;
-border:1px solid #333;
-border-radius:8px;
-box-sizing:border-box;
-}
-
-/* CHAT LIST */
-
-.chatItem{
-background:#1b1b1b;
-padding:10px;
-margin-top:6px;
-border-radius:8px;
-cursor:pointer;
-display:flex;
-justify-content:space-between;
-align-items:center;
-font-size:14px;
-}
-
-.chatItem:hover{
-background:#2a2a2a;
-}
-
-.deleteBtn{
-background:red;
-color:white;
-border:none;
-padding:4px 8px;
-border-radius:5px;
-cursor:pointer;
-}
-
-/* CHAT */
-
-#chat{
-flex:1;
-overflow-y:auto;
-padding:15px;
-display:flex;
-flex-direction:column;
-gap:12px;
-}
-
-/* USER */
-
-.user{
-align-self:flex-end;
-background:#333;
-padding:12px;
-border-radius:14px;
-max-width:75%;
-word-wrap:break-word;
-}
-
-/* AI */
-
-.ai{
-align-self:flex-start;
-max-width:90%;
-white-space:pre-wrap;
-word-wrap:break-word;
-line-height:1.5;
-}
-
-/* LOADING */
-
-.loading{
-opacity:.7;
-font-style:italic;
-}
-
-/* IMAGE */
-
-.chatImage{
-max-width:220px;
-border-radius:12px;
-margin-top:8px;
-border:1px solid #333;
-}
-
-/* INPUT */
-
-#inputArea{
-display:flex;
-align-items:center;
-gap:8px;
-padding:10px;
-border-top:1px solid #222;
-}
-
-#plusBtn{
-width:46px;
-height:46px;
-border-radius:50%;
-background:#222;
-color:white;
-font-size:28px;
-border:none;
-cursor:pointer;
-flex-shrink:0;
-}
-
-#input{
-flex:1;
-padding:13px;
-background:#111;
-color:white;
-border:1px solid #333;
-border-radius:12px;
-font-size:15px;
-}
-
-#sendBtn{
-padding:13px 16px;
-background:white;
-color:black;
-border:none;
-border-radius:12px;
-cursor:pointer;
-font-weight:bold;
-}
-
-#sendBtn:disabled{
-opacity:.5;
-cursor:not-allowed;
-}
-
-/* IMAGE PREVIEW */
-
-#imagePreviewContainer{
-padding-left:12px;
-padding-bottom:10px;
-}
-
-#preview{
-max-width:120px;
-border-radius:12px;
-display:none;
-border:1px solid #333;
-}
-
-</style>
-</head>
-
-<body>
-
-<!-- SIDEBAR -->
-
-<div id="sidebar">
-
-<button
-class="sideBtn"
-id="newChatBtn">
-+ New Chat
-</button>
-
-<button
-class="sideBtn"
-id="modeBtn">
-Smart Mode 🧠
-</button>
-
-<input
-id="search"
-placeholder="Search chats..."
-/>
-
-<div id="chatList"></div>
-
-</div>
-
-<!-- TOGGLE -->
-
-<button id="toggleBtn">
-◀
-</button>
-
-<!-- MAIN -->
-
-<div id="main">
-
-<div id="chat"></div>
-
-<div id="imagePreviewContainer">
-<img id="preview">
-</div>
-
-<div id="inputArea">
-
-<button id="plusBtn">
-＋
-</button>
-
-<input
-id="imgInput"
-type="file"
-accept="image/*"
-hidden
-/>
-
-<input
-id="input"
-placeholder="Message Nexaris..."
-autocomplete="off"
-/>
-
-<button id="sendBtn">
-Send
-</button>
-
-</div>
-
-</div>
+<!-- ========================= -->
+<!-- NEXARIS API KEYS -->
+<!-- ========================= -->
 
 <script>
 
-/* STORAGE */
+/* ===================================== */
+/* KEY 1 = CHAT AI KEY */
+/* ===================================== */
 
-const savedChats =
-localStorage.getItem(
-"nexaris_chats"
-);
-
-const savedCurrent =
-localStorage.getItem(
-"nexaris_current"
-);
-
-let chats =
-savedChats
-? JSON.parse(savedChats)
-: {};
-
-let currentChat =
-savedCurrent || null;
-
-/* FIRST CHAT */
-
-if(
-Object.keys(chats).length
-=== 0
-){
-
-chats["New Chat"] = {
-messages:[],
-pinned:false
-};
-
-currentChat =
-"New Chat";
-
-}
-
-/* API KEY */
-
-const API_KEY =
+const API_KEY_1 =
 "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";
 
-/* MODE */
-
-let mode = "smart";
-
-/* IMAGE */
-
-let lastImageBase64 = null;
-
-/* ELEMENTS */
-
-const chat =
-document.getElementById(
-"chat"
-);
-
-const input =
-document.getElementById(
-"input"
-);
-
-const sendBtn =
-document.getElementById(
-"sendBtn"
-);
-
-const sidebar =
-document.getElementById(
-"sidebar"
-);
-
-const main =
-document.getElementById(
-"main"
-);
-
-const toggleBtn =
-document.getElementById(
-"toggleBtn"
-);
-
-const chatList =
-document.getElementById(
-"chatList"
-);
-
-const plusBtn =
-document.getElementById(
-"plusBtn"
-);
-
-const imgInput =
-document.getElementById(
-"imgInput"
-);
-
-const modeBtn =
-document.getElementById(
-"modeBtn"
-);
-
-/* SAVE */
-
-function saveChats(){
-
-localStorage.setItem(
-"nexaris_chats",
-JSON.stringify(chats)
-);
-
-localStorage.setItem(
-"nexaris_current",
-currentChat
-);
-
-}
-
-/* RENDER */
-
-function render(){
-
-chat.innerHTML = "";
-
-const messages =
-chats[currentChat].messages;
-
-messages.forEach(msg=>{
-
-const div =
-document.createElement(
-"div"
-);
-
-div.className =
-msg.role === "user"
-? "user"
-: "ai";
-
-if(msg.loading){
-div.classList.add(
-"loading"
-);
-}
-
-div.textContent =
-msg.content;
-
-if(msg.image){
-
-const img =
-document.createElement(
-"img"
-);
-
-img.src = msg.image;
-
-img.className =
-"chatImage";
-
-div.appendChild(img);
-
-}
-
-chat.appendChild(div);
-
-});
-
-chat.scrollTop =
-chat.scrollHeight;
-
-renderChatList();
-
-}
-
-/* CHAT LIST */
-
-function renderChatList(){
-
-chatList.innerHTML = "";
-
-const search =
-document
-.getElementById("search")
-.value
-.toLowerCase();
-
-Object.keys(chats)
-.sort((a,b)=>
-chats[b].pinned -
-chats[a].pinned
-)
-.forEach(name=>{
-
-if(
-!name.toLowerCase()
-.includes(search)
-) return;
-
-const item =
-document.createElement(
-"div"
-);
-
-item.className =
-"chatItem";
-
-const left =
-document.createElement(
-"div"
-);
-
-left.innerHTML =
-(chats[name].pinned
-? "📌 "
-: "")
-+ name;
-
-left.onclick = ()=>{
-
-currentChat = name;
-
-saveChats();
-
-render();
-
-};
-
-const del =
-document.createElement(
-"button"
-);
-
-del.className =
-"deleteBtn";
-
-del.innerText = "X";
-
-del.onclick = (e)=>{
-
-e.stopPropagation();
-
-delete chats[name];
-
-if(
-Object.keys(chats).length
-=== 0
-){
-
-chats["New Chat"] = {
-messages:[],
-pinned:false
-};
-
-}
-
-currentChat =
-Object.keys(chats)[0];
-
-saveChats();
-
-render();
-
-};
-
-item.oncontextmenu =
-(e)=>{
-
-e.preventDefault();
-
-chats[name].pinned =
-!chats[name].pinned;
-
-saveChats();
-
-renderChatList();
-
-};
-
-item.appendChild(left);
-item.appendChild(del);
-
-chatList.appendChild(item);
-
-});
-
-}
-
-/* NEW CHAT */
-
-document
-.getElementById(
-"newChatBtn"
-)
-.addEventListener(
-"click",
-()=>{
-
-const name =
-"New Chat " +
-(
-Object.keys(chats)
-.length + 1
-);
-
-chats[name] = {
-messages:[],
-pinned:false
-};
-
-currentChat = name;
-
-saveChats();
-
-render();
-
-}
-);
-
-/* SIDEBAR TOGGLE */
-
-toggleBtn.addEventListener(
-"click",
-()=>{
-
-const hidden =
-sidebar.classList.toggle(
-"hidden"
-);
-
-main.classList.toggle(
-"full",
-hidden
-);
-
-toggleBtn.innerText =
-hidden
-? "▶"
-: "◀";
-
-toggleBtn.style.left =
-hidden
-? "10px"
-: "270px";
-
-}
-);
-
-/* MODE */
-
-modeBtn.addEventListener(
-"click",
-()=>{
-
-mode =
-mode === "smart"
-? "fast"
-: "smart";
-
-modeBtn.innerText =
-mode === "smart"
-? "Smart Mode 🧠"
-: "Fast Mode ⚡";
-
-}
-);
-
-/* SEARCH */
-
-document
-.getElementById(
-"search"
-)
-.addEventListener(
-"input",
-renderChatList
-);
-
-/* IMAGE BUTTON */
-
-plusBtn.addEventListener(
-"click",
-()=>{
-
-imgInput.click();
-
-}
-);
-
-/* IMAGE SELECT */
-
-imgInput.addEventListener(
-"change",
-(e)=>{
-
-const file =
-e.target.files[0];
-
-if(!file) return;
-
-const reader =
-new FileReader();
-
-reader.onload = ()=>{
-
-lastImageBase64 =
-reader.result;
-
-const preview =
-document.getElementById(
-"preview"
-);
-
-preview.src =
-lastImageBase64;
-
-preview.style.display =
-"block";
-
-};
-
-reader.readAsDataURL(file);
-
-}
-);
-
-/* AI CHAT NAME */
-
-async function autoNameChat(text){
-
-if(
-!currentChat.startsWith(
-"New Chat"
-)
-) return;
-
-try{
+/*
+Examples:
+- Groq API key
+- Gemini text API key
+- OpenAI key
+*/
+
+/* ===================================== */
+/* KEY 2 = IMAGE GENERATION KEY */
+/* ===================================== */
+
+const API_KEY_2 =
+"AIzaSyD3oiGFs1tEskJ6qY19wGdp5oR2VsWa6Hw";
+
+/*
+Examples:
+- Gemini image key
+- Stability AI key
+- Replicate key
+*/
+
+/* ===================================== */
+/* CURRENT ACTIVE SYSTEMS */
+/* ===================================== */
+
+const CHAT_PROVIDER =
+"groq";
+
+const IMAGE_PROVIDER =
+"gemini";
+
+/* ===================================== */
+/* CHAT FUNCTION */
+/* ===================================== */
+
+async function chatWithNexaris(messages){
 
 const response =
 await fetch(
@@ -755,199 +59,7 @@ headers:{
 "application/json",
 
 "Authorization":
-"Bearer " + API_KEY
-},
-
-body:JSON.stringify({
-
-model:
-"llama-3.1-8b-instant",
-
-messages:[
-
-{
-role:"system",
-content:
-`Create a short
-chat title.
-
-Rules:
-- 2 to 5 words
-- no punctuation
-- natural
-- title case`
-},
-
-{
-role:"user",
-content:text
-}
-
-],
-
-max_tokens:20
-
-})
-
-}
-);
-
-const data =
-await response.json();
-
-let title =
-
-data?.choices?.[0]
-?.message?.content
-?.trim()
-
-||
-
-"New Chat";
-
-title =
-title
-.replace(/["']/g,"")
-.slice(0,40);
-
-chats[title] =
-chats[currentChat];
-
-delete chats[currentChat];
-
-currentChat = title;
-
-saveChats();
-
-renderChatList();
-
-}catch(err){
-
-console.error(err);
-
-}
-
-}
-
-/* SEND */
-
-async function send(){
-
-const text =
-input.value.trim();
-
-if(
-!text &&
-!lastImageBase64
-) return;
-
-sendBtn.disabled = true;
-
-input.value = "";
-
-await autoNameChat(
-text
-);
-
-chats[currentChat]
-.messages
-.push({
-
-role:"user",
-content:text,
-image:lastImageBase64
-
-});
-
-render();
-
-saveChats();
-
-/* LOADING */
-
-const loading = {
-role:"assistant",
-content:"Nexaris is thinking... ⚡",
-loading:true
-};
-
-chats[currentChat]
-.messages
-.push(loading);
-
-render();
-
-const systemPrompt =
-mode === "smart"
-
-? `You are Nexaris.
-
-You are:
-- intelligent
-- friendly
-- engaging
-- natural
-
-You help with:
-- coding
-- science
-- math
-- creative ideas
-- image identification
-
-Use emojis naturally.`
-
-: `You are Nexaris.
-
-Respond quickly
-and concisely.`;
-
-const messages = [
-
-{
-role:"system",
-content:systemPrompt
-},
-
-...chats[currentChat]
-.messages
-.filter(m=>!m.loading)
-.map(m=>({
-
-role:m.role,
-content:m.content
-
-}))
-
-];
-
-if(lastImageBase64){
-
-messages.push({
-
-role:"user",
-content:
-"User uploaded image: "
-+ lastImageBase64
-
-});
-
-}
-
-try{
-
-const response =
-await fetch(
-"https://api.groq.com/openai/v1/chat/completions",
-{
-method:"POST",
-
-headers:{
-"Content-Type":
-"application/json",
-
-"Authorization":
-"Bearer " + API_KEY
+"Bearer " + API_KEY_1
 },
 
 body:JSON.stringify({
@@ -965,133 +77,89 @@ messages
 const data =
 await response.json();
 
-/* REMOVE LOADING */
-
-chats[currentChat]
-.messages =
-chats[currentChat]
-.messages
-.filter(m=>!m.loading);
-
-let reply = "";
-
-if(
-data?.choices?.[0]
-?.message?.content
-){
-
-reply =
-data.choices[0]
-.message.content;
+return data;
 
 }
 
-else if(
-data?.error?.message
-){
+/* ===================================== */
+/* IMAGE GENERATION FUNCTION */
+/* ===================================== */
 
-const err =
-data.error.message;
+async function generateImage(prompt){
 
-if(
-err.toLowerCase()
-.includes("token")
-||
-err.toLowerCase()
-.includes("rate")
-){
+const response =
+await fetch(
 
-reply =
-"⏳ Nexaris is temporarily busy. Try again in a few seconds.";
+"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key="
++ API_KEY_2,
 
-}else{
+{
+method:"POST",
 
-reply =
-"⚠️ " + err;
+headers:{
+"Content-Type":
+"application/json"
+},
 
+body:JSON.stringify({
+
+contents:[
+
+{
+parts:[
+
+{
+text:
+"Generate image: " +
+prompt
 }
 
-}else{
-
-reply =
-"⚠️ AI failed to respond.";
-
+]
 }
 
-chats[currentChat]
-.messages
-.push({
+]
 
-role:"assistant",
-content:reply
-
-});
-
-render();
-
-saveChats();
-
-}catch(err){
-
-console.error(err);
-
-chats[currentChat]
-.messages =
-chats[currentChat]
-.messages
-.filter(m=>!m.loading);
-
-chats[currentChat]
-.messages
-.push({
-
-role:"assistant",
-content:
-"⚠️ Connection error."
-
-});
-
-render();
-
-}
-
-/* RESET */
-
-sendBtn.disabled = false;
-
-lastImageBase64 = null;
-
-document.getElementById(
-"preview"
-).style.display = "none";
-
-}
-
-/* SEND BUTTON */
-
-sendBtn.addEventListener(
-"click",
-send
-);
-
-/* ENTER */
-
-input.addEventListener(
-"keydown",
-(e)=>{
-
-if(e.key === "Enter"){
-
-send();
-
-}
+})
 
 }
 );
 
-render();
+const data =
+await response.json();
+
+console.log(data);
+
+return data;
+
+}
+
+/* ===================================== */
+/* EXAMPLE IMAGE CALL */
+/* ===================================== */
+
+/*
+
+generateImage(
+"futuristic fossil hunter armor"
+);
+
+*/
+
+/* ===================================== */
+/* EXAMPLE CHAT CALL */
+/* ===================================== */
+
+/*
+
+chatWithNexaris([
+
+{
+role:"user",
+content:"Hello Nexaris"
+}
+
+]);
+
+*/
 
 </script>
-
-</body>
-</html>
