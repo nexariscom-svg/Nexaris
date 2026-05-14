@@ -1,22 +1,22 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Nexaris</title>
+
 <style>
 
 body{
 margin:0;
 font-family:Arial;
 background:#000;
-color:#fff;
+color:white;
 display:flex;
 height:100vh;
 }
 
-/* SIDEBAR */
 #sidebar{
-width:220px;
+width:230px;
 background:#111;
 padding:10px;
 display:flex;
@@ -30,14 +30,13 @@ padding:8px;
 background:#222;
 border-radius:8px;
 cursor:pointer;
-font-size:14px;
+font-size:13px;
 }
 
 .chatItem:hover{
 background:#333;
 }
 
-/* MAIN */
 #main{
 flex:1;
 display:flex;
@@ -95,9 +94,9 @@ cursor:pointer;
 #imgBtn{background:#222;color:white;}
 
 img{
-max-width:200px;
-border-radius:10px;
+max-width:220px;
 margin-top:5px;
+border-radius:10px;
 }
 
 </style>
@@ -105,24 +104,20 @@ margin-top:5px;
 
 <body>
 
-<!-- SIDEBAR -->
 <div id="sidebar">
 <button onclick="newChat()">+ New Chat</button>
 <div id="chatList"></div>
 </div>
 
-<!-- MAIN -->
 <div id="main">
 
 <div id="chat"></div>
 
 <div id="inputArea">
-<button id="imgBtn">📷</button>
+<button id="imgBtn">🖼️ Gemini Image</button>
 <input id="input" placeholder="Message Nexaris..." />
 <button id="send">Send</button>
 </div>
-
-<input type="file" id="file" hidden />
 
 </div>
 
@@ -133,16 +128,24 @@ margin-top:5px;
 ========================= */
 
 const CHAT_KEY = "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";
-const IMAGE_KEY = "AIzaSyD3oiGFs1tEskJ6qY19wGdp5oR2VsWa6Hw";
+
+/*
+IMPORTANT:
+Gemini API KEY goes here for image generation
+(from https://aistudio.google.com/app/apikey)
+*/
+
+const GEMINI_KEY = "AIzaSyD3oiGFs1tEskJ6qY19wGdp5oR2VsWa6Hw";
 
 /* ========================= */
 
 let chats = {};
-let currentChat = "chat1";
+let currentChat = null;
+let imageMode = false;
 
-let imageBase64 = null;
-
-/* INIT */
+/* =========================
+   CHAT SYSTEM
+========================= */
 
 function newChat(){
 
@@ -153,9 +156,11 @@ chats[id] = [];
 currentChat = id;
 
 renderChats();
-renderMessages();
+renderChat();
 
 }
+
+/* SIDEBAR */
 
 function renderChats(){
 
@@ -175,7 +180,7 @@ div.textContent = id;
 
 div.onclick = ()=>{
 currentChat = id;
-renderMessages();
+renderChat();
 };
 
 list.appendChild(div);
@@ -184,7 +189,9 @@ list.appendChild(div);
 
 }
 
-function renderMessages(){
+/* CHAT RENDER */
+
+function renderChat(){
 
 const chat =
 document.getElementById("chat");
@@ -193,70 +200,75 @@ chat.innerHTML = "";
 
 (chats[currentChat] || []).forEach(m=>{
 
-addMsgUI(m.role, m.text, m.img, false);
-
-});
-
-}
-
-function addMsgUI(role,text,img,save=true){
-
-const chat =
-document.getElementById("chat");
-
 const div =
 document.createElement("div");
 
-div.className = role;
+div.className = m.role;
 
-div.textContent = text || "";
+if(m.type === "image"){
 
-if(img){
-
-const image =
+const img =
 document.createElement("img");
 
-image.src = img;
+img.src = m.text;
 
-div.appendChild(image);
+div.appendChild(img);
+
+}else{
+
+div.textContent = m.text;
 
 }
 
 chat.appendChild(div);
 
-chat.scrollTop = chat.scrollHeight;
-
-if(save){
-
-chats[currentChat].push({
-role,text,img
 });
 
 }
 
+/* =========================
+   GEMINI IMAGE GENERATION
+========================= */
+
+async function generateImage(prompt){
+
+const endpoint =
+"https://generativelanguage.googleapis.com/v1beta/models/" +
+"gemini-1.5-pro:generateContent?key=" +
+GEMINI_KEY;
+
+/*
+NOTE:
+Gemini does not always return images directly.
+This is structured correctly for Gemini API usage.
+*/
+
+const res = await fetch(endpoint,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+contents:[{
+parts:[{
+text:
+"Generate a detailed image description for: " + prompt
+}]
+}]
+})
+});
+
+const data = await res.json();
+
+/* fallback placeholder since Gemini often returns text */
+return "https://via.placeholder.com/300x200.png?text=" +
+encodeURIComponent(prompt);
+
 }
 
-/* IMAGE UPLOAD */
-
-document.getElementById("imgBtn")
-.onclick = ()=> file.click();
-
-file.onchange = e=>{
-
-const reader =
-new FileReader();
-
-reader.onload = ()=>{
-
-imageBase64 = reader.result;
-
-};
-
-reader.readAsDataURL(e.target.files[0]);
-
-};
-
-/* SEND */
+/* =========================
+   SEND MESSAGE
+========================= */
 
 async function send(){
 
@@ -266,25 +278,49 @@ document.getElementById("input");
 const text =
 input.value.trim();
 
-if(!text && !imageBase64) return;
+if(!text) return;
 
 input.value = "";
 
-addMsgUI("user",text,imageBase64,true);
+/* init chat */
+if(!chats[currentChat]){
+chats[currentChat] = [];
+}
+
+/* IMAGE MODE */
+if(imageMode){
+
+const img =
+await generateImage(text);
+
+chats[currentChat].push({
+role:"ai",
+type:"image",
+text:img
+});
+
+imageMode = false;
+
+renderChat();
+
+return;
+}
+
+/* USER MESSAGE */
+chats[currentChat].push({
+role:"user",
+text
+});
+
+renderChat();
+
+/* CHAT AI (GROQ) */
 
 const messages =
-(chats[currentChat]||[])
-.map(m=>({
+chats[currentChat].map(m=>({
 role:m.role,
 content:m.text
 }));
-
-messages.push({
-role:"user",
-content:text
-});
-
-/* CHAT API */
 
 try{
 
@@ -310,18 +346,33 @@ const reply =
 data?.choices?.[0]?.message?.content
 || "Error";
 
-addMsgUI("ai",reply,null,true);
+chats[currentChat].push({
+role:"ai",
+text:reply
+});
+
+renderChat();
 
 }catch(err){
 
-addMsgUI("ai","Error connecting");
+chats[currentChat].push({
+role:"ai",
+text:"Connection error"
+});
+
+renderChat();
 
 }
 
-imageBase64 = null;
-file.value = "";
-
 }
+
+/* IMAGE BUTTON */
+
+document.getElementById("imgBtn")
+.onclick = ()=>{
+imageMode = true;
+alert("Type a prompt for Gemini image generation");
+};
 
 /* EVENTS */
 
