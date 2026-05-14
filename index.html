@@ -6,10 +6,6 @@
 
 <style>
 
-/* =========================
-   GLOBAL (BIG UI FIX)
-========================= */
-
 body{
 margin:0;
 font-family:Arial;
@@ -19,10 +15,7 @@ display:flex;
 height:100vh;
 }
 
-/* =========================
-   SIDEBAR
-========================= */
-
+/* SIDEBAR */
 #sidebar{
 width:280px;
 background:#111;
@@ -41,52 +34,44 @@ cursor:pointer;
 font-size:15px;
 }
 
-/* =========================
-   MAIN AREA
-========================= */
-
+/* MAIN */
 #main{
 flex:1;
 display:flex;
 flex-direction:column;
 }
 
-/* 🔥 BIG CHAT FIX (this is what you wanted) */
+/* BIG CHAT UI */
 #chat{
 flex:1;
 overflow-y:auto;
-padding:20px;
+padding:22px;
 display:flex;
 flex-direction:column;
-gap:14px;
+gap:16px;
 
-font-size:22px;   /* BIGGER TEXT */
-line-height:1.6;  /* MORE READABLE */
+font-size:26px;
+line-height:1.7;
 }
 
-/* USER MESSAGE */
 .user{
 align-self:flex-end;
 background:#333;
 padding:14px;
 border-radius:14px;
 max-width:75%;
-font-size:22px;
+font-size:26px;
 }
 
-/* AI MESSAGE */
 .ai{
 align-self:flex-start;
 padding:14px;
-max-width:90%;
-font-size:22px;
+max-width:92%;
+font-size:26px;
 white-space:pre-wrap;
 }
 
-/* =========================
-   INPUT BAR (BIGGER TOO)
-========================= */
-
+/* INPUT */
 #inputArea{
 display:flex;
 padding:14px;
@@ -112,13 +97,9 @@ border-radius:12px;
 cursor:pointer;
 }
 
-#send{background:white;color:black;}
-#imgBtn{background:#222;color:white;}
-
-img{
-max-width:260px;
-margin-top:8px;
-border-radius:12px;
+#send{
+background:white;
+color:black;
 }
 
 </style>
@@ -126,19 +107,16 @@ border-radius:12px;
 
 <body>
 
-<!-- SIDEBAR -->
 <div id="sidebar">
 <button onclick="newChat()">+ New Chat</button>
 <div id="chatList"></div>
 </div>
 
-<!-- MAIN -->
 <div id="main">
 
 <div id="chat"></div>
 
 <div id="inputArea">
-<button id="imgBtn">🖼️ Image</button>
 <input id="input" placeholder="Message Nexaris..." />
 <button id="send">Send</button>
 </div>
@@ -151,8 +129,8 @@ border-radius:12px;
    API KEYS
 ========================= */
 
-const GROQ_KEY = "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";
 const GEMINI_KEY = "AIzaSyD3oiGFs1tEskJ6qY19wGdp5oR2VsWa6Hw";
+const GROQ_KEY = "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";
 
 /* ========================= */
 
@@ -211,18 +189,7 @@ chat.innerHTML = "";
 
 const div = document.createElement("div");
 div.className = m.role;
-
-if(m.type === "image"){
-
-const img = document.createElement("img");
-img.src = m.text;
-div.appendChild(img);
-
-}else{
-
 div.textContent = m.text;
-
-}
 
 chat.appendChild(div);
 
@@ -233,45 +200,7 @@ chat.scrollTop = chat.scrollHeight;
 }
 
 /* =========================
-   GEMINI IMAGE GENERATION
-========================= */
-
-async function generateImage(prompt){
-
-const endpoint =
-"https://generativelanguage.googleapis.com/v1beta/models/" +
-"gemini-1.5-pro:generateContent?key=" +
-GEMINI_KEY;
-
-/* NOTE:
-This is structured correctly for Gemini.
-Real image output depends on API access.
-*/
-
-const res = await fetch(endpoint,{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify({
-contents:[{
-parts:[{
-text:"Create a detailed visual description of: " + prompt
-}]
-}]
-})
-});
-
-const data = await res.json();
-
-/* fallback image system (safe default) */
-return "https://via.placeholder.com/300x200.png?text=" +
-encodeURIComponent(prompt);
-
-}
-
-/* =========================
-   GEMINI CHAT FALLBACK
+   GEMINI (PRIMARY AI)
 ========================= */
 
 async function geminiChat(messages){
@@ -298,45 +227,15 @@ text: messages.map(m=>m.content).join("\n")
 const data = await res.json();
 
 return data?.candidates?.[0]?.content?.parts?.[0]?.text
-|| "Gemini failed.";
+|| null;
+
 }
 
 /* =========================
-   SEND (SMART ROUTER)
+   GROQ (FALLBACK)
 ========================= */
 
-async function send(){
-
-const input = document.getElementById("input");
-const text = input.value.trim();
-
-if(!text) return;
-
-input.value = "";
-
-if(!chats[currentChat]){
-chats[currentChat] = [];
-}
-
-/* save user */
-chats[currentChat].push({
-role:"user",
-text
-});
-
-renderChat();
-
-/* messages */
-const messages = chats[currentChat].map(m=>({
-role:m.role,
-content:m.text
-}));
-
-/* =========================
-   1. TRY GROQ
-========================= */
-
-try{
+async function groqChat(messages){
 
 const res = await fetch(
 "https://api.groq.com/openai/v1/chat/completions",
@@ -355,61 +254,68 @@ messages
 
 const data = await res.json();
 
-const reply =
-data?.choices?.[0]?.message?.content;
-
-if(!reply) throw new Error("Groq failed");
-
-chats[currentChat].push({
-role:"ai",
-text:reply
-});
-
-renderChat();
+return data?.choices?.[0]?.message?.content
+|| null;
 
 }
 
 /* =========================
-   2. FALLBACK → GEMINI
+   SEND (GEMINI FIRST)
 ========================= */
 
-catch(err){
+async function send(){
 
-const fallback = await geminiChat(messages);
+const input = document.getElementById("input");
+const text = input.value.trim();
+
+if(!text) return;
+
+input.value = "";
+
+if(!chats[currentChat]){
+chats[currentChat] = [];
+}
 
 chats[currentChat].push({
-role:"ai",
-text:"(Gemini fallback)\n\n" + fallback
+role:"user",
+text
 });
 
 renderChat();
 
-}
+const messages = chats[currentChat].map(m=>({
+role:m.role,
+content:m.text
+}));
+
+/* =========================
+   1. TRY GEMINI FIRST
+========================= */
+
+let reply = await geminiChat(messages);
+
+/* =========================
+   2. IF GEMINI FAILS → GROQ
+========================= */
+
+if(!reply){
+
+reply = await groqChat(messages);
 
 }
 
 /* =========================
-   IMAGE MODE
+   FINAL OUTPUT
 ========================= */
-
-document.getElementById("imgBtn")
-.onclick = async ()=>{
-
-const prompt = prompt("Image prompt:");
-
-if(!prompt) return;
-
-const img = await generateImage(prompt);
 
 chats[currentChat].push({
 role:"ai",
-type:"image",
-text:img
+text: reply || "Both AI systems failed."
 });
 
 renderChat();
 
-};
+}
 
 /* EVENTS */
 
