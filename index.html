@@ -2,102 +2,86 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Nexaris</title>
+<title>Nexaris Smart Debug</title>
 
 <style>
 
+/* =========================
+   BIG UI
+========================= */
+
 body{
 margin:0;
-font-family:Arial;
 background:#000;
 color:white;
+font-family:Arial;
 display:flex;
+flex-direction:column;
 height:100vh;
 }
 
-/* SIDEBAR */
-#sidebar{
-width:280px;
-background:#111;
-padding:12px;
-display:flex;
-flex-direction:column;
-gap:10px;
-border-right:1px solid #222;
-}
+/* CHAT AREA */
 
-.chatItem{
-padding:12px;
-background:#222;
-border-radius:10px;
-cursor:pointer;
-font-size:15px;
-}
-
-/* MAIN */
-#main{
-flex:1;
-display:flex;
-flex-direction:column;
-}
-
-/* BIG CHAT UI */
 #chat{
 flex:1;
 overflow-y:auto;
-padding:22px;
+padding:24px;
 display:flex;
 flex-direction:column;
-gap:16px;
+gap:18px;
 
-font-size:26px;
+font-size:30px; /* HUGE TEXT */
 line-height:1.7;
 }
+
+/* USER */
 
 .user{
 align-self:flex-end;
 background:#333;
-padding:14px;
-border-radius:14px;
+padding:18px;
+border-radius:16px;
 max-width:75%;
-font-size:26px;
+font-size:30px;
 }
+
+/* AI */
 
 .ai{
 align-self:flex-start;
-padding:14px;
+background:#111;
+padding:18px;
+border-radius:16px;
 max-width:92%;
-font-size:26px;
+font-size:30px;
 white-space:pre-wrap;
 }
 
 /* INPUT */
+
 #inputArea{
 display:flex;
-padding:14px;
-gap:10px;
+gap:12px;
+padding:16px;
 border-top:1px solid #222;
 }
 
 #input{
 flex:1;
-padding:16px;
-font-size:18px;
+padding:18px;
+font-size:24px;
 background:#111;
-border:1px solid #333;
 color:white;
-border-radius:12px;
+border:1px solid #333;
+border-radius:14px;
 }
 
 button{
-padding:14px;
-font-size:15px;
+padding:18px;
+font-size:22px;
 border:none;
-border-radius:12px;
+border-radius:14px;
 cursor:pointer;
-}
-
-#send{
 background:white;
 color:black;
 }
@@ -107,20 +91,11 @@ color:black;
 
 <body>
 
-<div id="sidebar">
-<button onclick="newChat()">+ New Chat</button>
-<div id="chatList"></div>
-</div>
-
-<div id="main">
-
 <div id="chat"></div>
 
 <div id="inputArea">
 <input id="input" placeholder="Message Nexaris..." />
-<button id="send">Send</button>
-</div>
-
+<button onclick="send()">Send</button>
 </div>
 
 <script>
@@ -134,80 +109,38 @@ const GROQ_KEY = "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";
 
 /* ========================= */
 
-let chats = {};
-let currentChat = null;
+const chat =
+document.getElementById("chat");
 
 /* =========================
-   CHAT SYSTEM
+   UI MESSAGE
 ========================= */
 
-function newChat(){
+function addMsg(role,text){
 
-const id = "chat_" + Date.now();
+const div =
+document.createElement("div");
 
-chats[id] = [];
-
-currentChat = id;
-
-renderChats();
-renderChat();
-
-}
-
-/* SIDEBAR */
-
-function renderChats(){
-
-const list = document.getElementById("chatList");
-list.innerHTML = "";
-
-Object.keys(chats).forEach(id=>{
-
-const div = document.createElement("div");
-div.className = "chatItem";
-div.textContent = id;
-
-div.onclick = ()=>{
-currentChat = id;
-renderChat();
-};
-
-list.appendChild(div);
-
-});
-
-}
-
-/* CHAT RENDER */
-
-function renderChat(){
-
-const chat = document.getElementById("chat");
-chat.innerHTML = "";
-
-(chats[currentChat] || []).forEach(m=>{
-
-const div = document.createElement("div");
-div.className = m.role;
-div.textContent = m.text;
+div.className = role;
+div.textContent = text;
 
 chat.appendChild(div);
 
-});
-
-chat.scrollTop = chat.scrollHeight;
+chat.scrollTop =
+chat.scrollHeight;
 
 }
 
 /* =========================
-   GEMINI (PRIMARY AI)
+   GEMINI TEST
 ========================= */
 
-async function geminiChat(messages){
+async function geminiChat(prompt){
+
+try{
 
 const endpoint =
-"https://generativelanguage.googleapis.com/v1beta/models/" +
-"gemini-1.5-flash:generateContent?key=" +
+"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
 GEMINI_KEY;
 
 const res = await fetch(endpoint,{
@@ -218,7 +151,7 @@ headers:{
 body:JSON.stringify({
 contents:[{
 parts:[{
-text: messages.map(m=>m.content).join("\n")
+text: prompt
 }]
 }]
 })
@@ -226,16 +159,58 @@ text: messages.map(m=>m.content).join("\n")
 
 const data = await res.json();
 
-return data?.candidates?.[0]?.content?.parts?.[0]?.text
-|| null;
+/* DEBUG ERRORS */
+
+if(data.error){
+
+return {
+success:false,
+reason:
+"Gemini Error:\n\n" +
+(data.error.message || "Unknown Gemini issue")
+};
+
+}
+
+/* SUCCESS */
+
+const text =
+data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+if(!text){
+
+return {
+success:false,
+reason:
+"Gemini returned an empty response."
+};
+
+}
+
+return {
+success:true,
+text
+};
+
+}catch(err){
+
+return {
+success:false,
+reason:
+"Gemini crashed:\n\n" + err
+};
+
+}
 
 }
 
 /* =========================
-   GROQ (FALLBACK)
+   GROQ TEST
 ========================= */
 
-async function groqChat(messages){
+async function groqChat(prompt){
+
+try{
 
 const res = await fetch(
 "https://api.groq.com/openai/v1/chat/completions",
@@ -247,89 +222,158 @@ headers:{
 },
 body:JSON.stringify({
 model:"llama-3.1-8b-instant",
-messages
+messages:[
+{
+role:"user",
+content:prompt
+}
+]
 })
 }
 );
 
 const data = await res.json();
 
-return data?.choices?.[0]?.message?.content
-|| null;
+/* DEBUG ERRORS */
+
+if(data.error){
+
+return {
+success:false,
+reason:
+"Groq Error:\n\n" +
+(data.error.message || "Unknown Groq issue")
+};
+
+}
+
+/* SUCCESS */
+
+const text =
+data?.choices?.[0]?.message?.content;
+
+if(!text){
+
+return {
+success:false,
+reason:
+"Groq returned an empty response."
+};
+
+}
+
+return {
+success:true,
+text
+};
+
+}catch(err){
+
+return {
+success:false,
+reason:
+"Groq crashed:\n\n" + err
+};
+
+}
 
 }
 
 /* =========================
-   SEND (GEMINI FIRST)
+   SEND
 ========================= */
 
 async function send(){
 
-const input = document.getElementById("input");
-const text = input.value.trim();
+const input =
+document.getElementById("input");
+
+const text =
+input.value.trim();
 
 if(!text) return;
 
 input.value = "";
 
-if(!chats[currentChat]){
-chats[currentChat] = [];
-}
-
-chats[currentChat].push({
-role:"user",
-text
-});
-
-renderChat();
-
-const messages = chats[currentChat].map(m=>({
-role:m.role,
-content:m.text
-}));
+addMsg("user",text);
 
 /* =========================
-   1. TRY GEMINI FIRST
+   TRY GEMINI FIRST
 ========================= */
 
-let reply = await geminiChat(messages);
+addMsg("ai","Testing Gemini...");
 
-/* =========================
-   2. IF GEMINI FAILS → GROQ
-========================= */
+const gemini =
+await geminiChat(text);
 
-if(!reply){
+/* SUCCESS */
 
-reply = await groqChat(messages);
+if(gemini.success){
+
+chat.lastChild.remove();
+
+addMsg(
+"ai",
+"🧠 Gemini Success:\n\n" +
+gemini.text
+);
+
+return;
 
 }
 
+/* FAILURE */
+
+chat.lastChild.remove();
+
+addMsg(
+"ai",
+gemini.reason
+);
+
 /* =========================
-   FINAL OUTPUT
+   TRY GROQ
 ========================= */
 
-chats[currentChat].push({
-role:"ai",
-text: reply || "Both AI systems failed."
-});
+addMsg(
+"ai",
+"Gemini failed.\n\nTrying Groq..."
+);
 
-renderChat();
+const groq =
+await groqChat(text);
+
+/* SUCCESS */
+
+if(groq.success){
+
+chat.lastChild.remove();
+
+addMsg(
+"ai",
+"⚡ Groq Success:\n\n" +
+groq.text
+);
+
+return;
 
 }
 
-/* EVENTS */
+/* FAILURE */
 
-document.getElementById("send")
-.onclick = send;
+chat.lastChild.remove();
 
-document.getElementById("input")
-.addEventListener("keydown",(e)=>{
-if(e.key==="Enter") send();
-});
+addMsg(
+"ai",
+groq.reason
+);
 
-/* START */
+addMsg(
+"ai",
+"❌ BOTH APIS FAILED"
+);
 
-newChat();
+}
 
 </script>
 
