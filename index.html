@@ -2,37 +2,62 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Nexaris Stable</title>
+<title>Nexaris Friend Mode</title>
 
 <style>
 
-body{
+/* =========================
+   FULL SCREEN FIX
+========================= */
+
+html, body{
 margin:0;
-font-family:Arial;
+padding:0;
+height:100%;
+width:100%;
 background:#000;
-color:white;
-display:flex;
-height:100vh;
+overflow:hidden;
+font-family:Arial;
 }
 
-/* SIDEBAR */
+/* MAIN LAYOUT */
+#app{
+display:flex;
+height:100vh;
+width:100vw;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
 #sidebar{
-width:300px;
+width:320px;
 background:#111;
-padding:12px;
 display:flex;
 flex-direction:column;
+padding:12px;
 gap:10px;
 border-right:1px solid #222;
 }
 
 #mode{
-padding:10px;
+padding:12px;
 background:#222;
 border-radius:10px;
-font-size:16px;
 text-align:center;
 cursor:pointer;
+font-size:16px;
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+background:white;
+color:black;
+font-size:16px;
 }
 
 .chatItem{
@@ -43,46 +68,55 @@ cursor:pointer;
 font-size:18px;
 }
 
-/* MAIN */
+/* =========================
+   MAIN CHAT
+========================= */
+
 #main{
 flex:1;
 display:flex;
 flex-direction:column;
+height:100vh;
 }
 
-/* CHAT */
+/* CHAT AREA FULL FILL */
 #chat{
 flex:1;
 overflow-y:auto;
 padding:24px;
 display:flex;
 flex-direction:column;
-gap:18px;
+gap:16px;
 
 font-size:28px;
 line-height:1.7;
 }
 
+/* USER MESSAGE */
 .user{
 align-self:flex-end;
 background:#333;
 padding:16px;
-border-radius:14px;
+border-radius:16px;
 max-width:75%;
 font-size:28px;
 }
 
+/* AI MESSAGE */
 .ai{
 align-self:flex-start;
 background:#111;
 padding:16px;
-border-radius:14px;
+border-radius:16px;
 max-width:92%;
 font-size:28px;
 white-space:pre-wrap;
 }
 
-/* INPUT */
+/* =========================
+   INPUT BAR
+========================= */
+
 #inputArea{
 display:flex;
 gap:10px;
@@ -101,20 +135,11 @@ border:1px solid #333;
 border-radius:12px;
 }
 
-button{
-padding:16px;
-font-size:18px;
-border:none;
-border-radius:12px;
-cursor:pointer;
-background:white;
-color:black;
-}
-
 #imgInput{
 display:none;
 }
 
+/* IMAGE */
 img{
 max-width:300px;
 border-radius:12px;
@@ -126,10 +151,12 @@ margin-top:8px;
 
 <body>
 
+<div id="app">
+
 <!-- SIDEBAR -->
 <div id="sidebar">
 
-<div id="mode" onclick="toggleMode()">Mode: SMART 🧠</div>
+<div id="mode" onclick="toggleMode()">Friend Mode 💖</div>
 
 <button onclick="newChat()">+ New Chat</button>
 
@@ -156,10 +183,12 @@ margin-top:8px;
 
 </div>
 
+</div>
+
 <script>
 
 /* =========================
-   KEYS
+   API KEYS
 ========================= */
 
 const OPENROUTER_KEY = "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";
@@ -169,17 +198,25 @@ const GROQ_KEY = "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";
 
 let chats = {};
 let currentChat = null;
-let mode = "smart";
+
+/* FRIEND MODE DEFAULT */
+let mode = "friend"; // friend, smart, fast
 
 /* =========================
-   MODE SWITCH
+   MODE SYSTEM
 ========================= */
 
 function toggleMode(){
-mode = mode === "smart" ? "fast" : "smart";
+
+if(mode === "friend") mode = "smart";
+else if(mode === "smart") mode = "fast";
+else mode = "friend";
 
 document.getElementById("mode").innerText =
-"Mode: " + (mode === "smart" ? "SMART 🧠" : "FAST ⚡");
+mode === "friend" ? "Friend Mode 💖"
+: mode === "smart" ? "Smart Mode 🧠"
+: "Fast Mode ⚡";
+
 }
 
 /* =========================
@@ -214,7 +251,10 @@ renderChat();
 
 }
 
-/* SIDEBAR */
+/* =========================
+   SIDEBAR
+========================= */
+
 function renderChats(){
 
 const list = document.getElementById("chatList");
@@ -242,7 +282,7 @@ list.appendChild(div);
 }
 
 /* =========================
-   FIXED CHAT RENDER (IMPORTANT)
+   CHAT RENDER (FIXED FULL MEMORY)
 ========================= */
 
 function renderChat(){
@@ -254,7 +294,6 @@ if(!chats[currentChat]){
 chats[currentChat] = [];
 }
 
-/* rebuild full history ALWAYS */
 for(const m of chats[currentChat]){
 
 const div = document.createElement("div");
@@ -281,15 +320,37 @@ chat.scrollTop = chat.scrollHeight;
 }
 
 /* =========================
+   FRIEND MODE PROMPT
+========================= */
+
+function buildPrompt(messages){
+
+if(mode !== "friend") return messages;
+
+return [
+{
+role:"system",
+content:
+"You are Nexaris in FRIEND MODE. " +
+"Talk naturally like a warm, friendly assistant. " +
+"Use light emojis occasionally. " +
+"Keep responses human, relaxed, and easy to read."
+},
+...messages
+];
+
+}
+
+/* =========================
    OPENROUTER
 ========================= */
 
 async function openRouterChat(messages){
 
 const model =
-mode === "smart"
-? "deepseek/deepseek-chat-v3-0324:free"
-: "mistralai/mistral-7b-instruct:free";
+mode === "fast"
+? "mistralai/mistral-7b-instruct:free"
+: "deepseek/deepseek-chat-v3-0324:free";
 
 const res = await fetch(
 "https://openrouter.ai/api/v1/chat/completions",
@@ -303,7 +364,7 @@ headers:{
 },
 body:JSON.stringify({
 model:model,
-messages:messages
+messages:buildPrompt(messages)
 })
 }
 );
@@ -339,7 +400,7 @@ headers:{
 },
 body:JSON.stringify({
 model:"llama-3.1-8b-instant",
-messages:messages
+messages:buildPrompt(messages)
 })
 }
 );
@@ -405,7 +466,10 @@ result.success ? result.text : "❌ FAILED\n\n" + result.reason
 
 }
 
-/* ADD MSG */
+/* =========================
+   ADD MESSAGE
+========================= */
+
 function addMsg(role,text){
 
 const chat = document.getElementById("chat");
