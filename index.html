@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Nexaris Final</title>
+<title>Nexaris Clean UI</title>
 
 <style>
 
@@ -16,138 +16,135 @@ font-family:Arial;
 overflow:hidden;
 }
 
-/* APP */
+/* FULL APP */
 #app{
 display:flex;
 width:100vw;
 height:100vh;
 }
 
-/* SIDEBAR */
+/* SIDEBAR (TIGHTER = MORE CHAT SPACE) */
 #sidebar{
-width:320px;
+width:260px;
 background:#111;
 display:flex;
 flex-direction:column;
-padding:12px;
-gap:10px;
+padding:10px;
+gap:8px;
 border-right:1px solid #222;
 overflow-y:auto;
 }
 
-/* MODE BUTTON */
+/* MODE */
 #mode{
-padding:12px;
+padding:10px;
 background:#222;
-border-radius:10px;
+border-radius:8px;
 text-align:center;
 cursor:pointer;
-font-size:16px;
+font-size:14px;
 color:white;
 }
 
 /* BUTTON */
 button{
-padding:12px;
-font-size:15px;
+padding:10px;
+font-size:14px;
 border:none;
-border-radius:10px;
+border-radius:8px;
 cursor:pointer;
 background:white;
 color:black;
 }
 
-/* CHAT ITEMS */
+/* CHAT LIST */
 .chatItem{
-padding:12px;
+padding:10px;
 background:#222;
-border-radius:10px;
+border-radius:8px;
 cursor:pointer;
-font-size:16px;
+font-size:14px;
 color:white;
 }
 
-/* PERSONALIZATION SECTION */
+/* PERSONALIZATION */
 .sectionTitle{
-margin-top:10px;
-font-size:13px;
+margin-top:8px;
+font-size:12px;
 color:#aaa;
 }
 
 #personaBox{
 width:100%;
-height:140px;
+height:120px;
 background:#222;
 color:white;
 border:none;
-border-radius:10px;
-padding:10px;
-font-size:13px;
+border-radius:8px;
+padding:8px;
+font-size:12px;
 resize:none;
-outline:none;
 }
 
-/* MAIN */
+/* MAIN FULL WIDTH FEEL */
 #main{
 flex:1;
 display:flex;
 flex-direction:column;
+height:100vh;
 }
 
-/* CHAT */
+/* CHAT AREA = TRUE FULL SCREEN FEEL */
 #chat{
 flex:1;
 overflow-y:auto;
-padding:24px;
+padding:20px 24px;
 display:flex;
 flex-direction:column;
-gap:16px;
-font-size:26px;
+gap:14px;
+font-size:24px;
 line-height:1.6;
 }
 
-/* USER */
+/* USER ONLY (KEEP SIMPLE) */
 .user{
 align-self:flex-end;
-background:#333;
-padding:14px;
-border-radius:14px;
-max-width:75%;
+color:#fff;
+max-width:80%;
+text-align:left;
 }
 
-/* AI */
+/* AI = NO BUBBLE, NO BOX, JUST TEXT */
 .ai{
 align-self:flex-start;
-background:#111;
-padding:14px;
-border-radius:14px;
-max-width:92%;
+color:#eaeaea;
+max-width:95%;
 white-space:pre-wrap;
 }
 
-/* INPUT */
+/* INPUT BAR */
 #inputArea{
 display:flex;
-gap:10px;
-padding:14px;
+gap:8px;
+padding:12px;
 border-top:1px solid #222;
 align-items:center;
 }
 
 #input{
 flex:1;
-padding:16px;
-font-size:18px;
+padding:14px;
+font-size:16px;
 background:#111;
 color:white;
 border:1px solid #333;
-border-radius:10px;
+border-radius:8px;
 }
 
 img{
-max-width:300px;
-border-radius:12px;
-margin-top:8px;
+max-width:280px;
+border-radius:10px;
+margin-top:6px;
 }
 
 #imgInput{
@@ -173,12 +170,8 @@ display:none;
 <div class="sectionTitle">Personalization 🧠</div>
 
 <textarea id="personaBox"
-placeholder="Example:
-Name: Nova 🌙
-Be friendly, use emojis, talk like a calm assistant.
-
-User: hi
-Assistant: hey 🙂 how are you?"></textarea>
+placeholder="Name: Nova 🌙
+Be friendly, use emojis, talk naturally."></textarea>
 
 </div>
 
@@ -205,145 +198,107 @@ Assistant: hey 🙂 how are you?"></textarea>
 
 <script>
 
-/* =========================
-   KEYS
-========================= */
+/* KEYS */
+const OPENROUTER_KEY="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";
+const GROQ_KEY="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";
 
-const OPENROUTER_KEY = "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";
-const GROQ_KEY = "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";
+let chats={};
+let currentChat=null;
+let mode="friend";
 
-/* ========================= */
-
-let chats = {};
-let currentChat = null;
-let mode = "friend";
-
-/* =========================
-   MODE
-========================= */
-
+/* MODE */
 function toggleMode(){
-
-if(mode==="friend") mode="smart";
-else if(mode==="smart") mode="fast";
-else mode="friend";
-
-document.getElementById("mode").innerText =
+mode = mode==="friend"?"smart":mode==="smart"?"fast":"friend";
+document.getElementById("mode").innerText=
 mode==="friend"?"Friend Mode 💖":
 mode==="smart"?"Smart Mode 🧠":
 "Fast Mode ⚡";
-
 }
 
-/* =========================
-   CHAT SYSTEM
-========================= */
-
+/* CHAT */
 function newChat(){
-
-const id = "Chat " + (Object.keys(chats).length + 1);
-
-chats[id] = [];
-currentChat = id;
-
+const id="Chat "+(Object.keys(chats).length+1);
+chats[id]=[];
+currentChat=id;
 renderChats();
 renderChat();
-
-save();
-
 }
 
-/* RENAME */
-function renameChat(oldName){
-
-const n = prompt("Rename chat:");
-if(!n) return;
-
-chats[n] = chats[oldName];
-delete chats[oldName];
-
-currentChat = n;
-
-renderChats();
-renderChat();
-
-save();
-
+/* RENDER CHAT LIST */
+function renderChats(){
+const list=document.getElementById("chatList");
+list.innerHTML="";
+Object.keys(chats).forEach(id=>{
+const d=document.createElement("div");
+d.className="chatItem";
+d.textContent=id;
+d.onclick=()=>{currentChat=id;renderChat();};
+list.appendChild(d);
+});
 }
 
-/* =========================
-   SAVE
-========================= */
+/* CLEAN CHAT RENDER */
+function renderChat(){
+const chat=document.getElementById("chat");
+chat.innerHTML="";
+if(!chats[currentChat])chats[currentChat]=[];
 
-function save(){
-localStorage.setItem("nexaris_chats",JSON.stringify(chats));
-localStorage.setItem("nexaris_mode",mode);
-localStorage.setItem("nexaris_persona",
-document.getElementById("personaBox").value || ""
-);
+for(const m of chats[currentChat]){
+const d=document.createElement("div");
+d.className=m.role;
+
+if(m.type==="image"){
+const img=document.createElement("img");
+img.src=m.text;
+d.appendChild(img);
+}else{
+d.textContent=m.text;
 }
 
-function load(){
-chats = JSON.parse(localStorage.getItem("nexaris_chats")||"{}");
-mode = localStorage.getItem("nexaris_mode")||"friend";
-
-document.getElementById("personaBox").value =
-localStorage.getItem("nexaris_persona") || "";
+chat.appendChild(d);
 }
 
-/* =========================
-   PERSONA
-========================= */
+chat.scrollTop=chat.scrollHeight;
+}
 
+/* PERSONA */
 function getPersona(){
-return document.getElementById("personaBox").value || "";
+return document.getElementById("personaBox").value||"";
 }
 
-/* =========================
-   PROMPT
-========================= */
-
+/* PROMPT */
 function buildPrompt(messages){
 
-let persona = getPersona();
+let system=
+"Be a friendly assistant 🙂. Use emojis naturally. " +
+"Follow user personality if provided.";
 
-let system =
-"Core rules: " +
-"- Always use light emojis 🙂✨ " +
-"- Be friendly and conversational " +
-"- Follow user persona strictly ";
-
+let persona=getPersona();
 if(persona.trim()){
-system += "\n\nPersona:\n" + persona;
+system+="\n\nUser style:\n"+persona;
 }
 
-return [
+return[
 {role:"system",content:system},
 ...messages
 ];
 
 }
 
-/* =========================
-   OPENROUTER
-========================= */
-
+/* OPENROUTER */
 async function openRouterChat(messages){
 
-const model =
-mode==="fast"
+const model= mode==="fast"
 ?"mistralai/mistral-7b-instruct:free"
 :"deepseek/deepseek-chat-v3-0324:free";
 
-const res = await fetch(
+const res=await fetch(
 "https://openrouter.ai/api/v1/chat/completions",
 {
 method:"POST",
 headers:{
 "Content-Type":"application/json",
-"Authorization":"Bearer "+OPENROUTER_KEY,
-"HTTP-Referer":"https://nexaris.local",
-"X-Title":"Nexaris"
+"Authorization":"Bearer "+OPENROUTER_KEY
 },
 body:JSON.stringify({
 model,
@@ -352,24 +307,19 @@ messages:buildPrompt(messages)
 }
 );
 
-const data = await res.json();
-
+const data=await res.json();
 if(data.error)return{success:false,reason:data.error.message};
 
-const text = data?.choices?.[0]?.message?.content;
+const text=data?.choices?.[0]?.message?.content;
 
 return text?
 {success:true,text}:{success:false,reason:"empty"};
-
 }
 
-/* =========================
-   GROQ
-========================= */
-
+/* GROQ */
 async function groqChat(messages){
 
-const res = await fetch(
+const res=await fetch(
 "https://api.groq.com/openai/v1/chat/completions",
 {
 method:"POST",
@@ -384,21 +334,16 @@ messages:buildPrompt(messages)
 }
 );
 
-const data = await res.json();
-
+const data=await res.json();
 if(data.error)return{success:false,reason:data.error.message};
 
-const text = data?.choices?.[0]?.message?.content;
+const text=data?.choices?.[0]?.message?.content;
 
 return text?
 {success:true,text}:{success:false,reason:"empty"};
-
 }
 
-/* =========================
-   SEND
-========================= */
-
+/* SEND */
 async function send(){
 
 const input=document.getElementById("input");
@@ -411,110 +356,44 @@ if(!chats[currentChat])chats[currentChat]=[];
 
 chats[currentChat].push({role:"user",text});
 renderChat();
-save();
 
 const msgs=chats[currentChat].map(m=>({
 role:m.role,
 content:m.text
 }));
 
-add("ai","Thinking...");
-
 let r=await openRouterChat(msgs);
-
 if(!r.success)r=await groqChat(msgs);
 
-chat.lastChild.remove();
-
 add("ai",r.success?r.text:"❌ FAILED\n\n"+r.reason);
-
 }
 
-/* =========================
-   RENDER
-========================= */
-
-function renderChat(){
-
+/* ADD */
+function add(role,text){
 const chat=document.getElementById("chat");
-chat.innerHTML="";
-
-if(!chats[currentChat])chats[currentChat]=[];
-
-for(const m of chats[currentChat]){
-
 const d=document.createElement("div");
-d.className=m.role;
-
-if(m.type==="image"){
-
-const img=document.createElement("img");
-img.src=m.text;
-d.appendChild(img);
-
-}else d.textContent=m.text;
-
+d.className=role;
+d.textContent=text;
 chat.appendChild(d);
-
-}
-
 chat.scrollTop=chat.scrollHeight;
-
 }
 
-/* =========================
-   SIDEBAR
-========================= */
-
-function renderChats(){
-
-const list=document.getElementById("chatList");
-list.innerHTML="";
-
-Object.keys(chats).forEach(id=>{
-
-const d=document.createElement("div");
-d.className="chatItem";
-d.textContent=id;
-
-d.onclick=()=>{currentChat=id;renderChat();};
-d.ondblclick=()=>renameChat(id);
-
-list.appendChild(d);
-
-});
-
-}
-
-/* =========================
-   IMAGE
-========================= */
-
+/* IMAGE */
 document.getElementById("imgInput")
 .addEventListener("change",e=>{
-
 const f=e.target.files[0];
 if(!f)return;
-
 const r=new FileReader();
-
 r.onload=ev=>{
-
 if(!chats[currentChat])chats[currentChat]=[];
-
 chats[currentChat].push({
 role:"user",
 type:"image",
 text:ev.target.result
 });
-
 renderChat();
-save();
-
 };
-
 r.readAsDataURL(f);
-
 });
 
 /* ENTER */
@@ -523,29 +402,8 @@ document.getElementById("input")
 if(e.key==="Enter")send();
 });
 
-/* ADD MSG */
-function add(role,text){
-
-const chat=document.getElementById("chat");
-
-const d=document.createElement("div");
-d.className=role;
-d.textContent=text;
-
-chat.appendChild(d);
-chat.scrollTop=chat.scrollHeight;
-
-}
-
 /* INIT */
-load();
-
-if(Object.keys(chats).length===0)newChat();
-else{
-currentChat=Object.keys(chats)[0];
-renderChats();
-renderChat();
-}
+newChat();
 
 </script>
 
