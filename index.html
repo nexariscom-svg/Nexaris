@@ -2,12 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Nexaris Smart Debug</title>
+<title>Nexaris Gemini</title>
 
 <style>
 
 /* =========================
-   BIG UI
+   HUGE UI
 ========================= */
 
 body{
@@ -20,7 +20,7 @@ flex-direction:column;
 height:100vh;
 }
 
-/* CHAT AREA */
+/* CHAT */
 
 #chat{
 flex:1;
@@ -30,7 +30,7 @@ display:flex;
 flex-direction:column;
 gap:18px;
 
-font-size:30px; /* HUGE TEXT */
+font-size:30px;
 line-height:1.7;
 }
 
@@ -40,7 +40,7 @@ line-height:1.7;
 align-self:flex-end;
 background:#333;
 padding:18px;
-border-radius:16px;
+border-radius:18px;
 max-width:75%;
 font-size:30px;
 }
@@ -51,7 +51,7 @@ font-size:30px;
 align-self:flex-start;
 background:#111;
 padding:18px;
-border-radius:16px;
+border-radius:18px;
 max-width:92%;
 font-size:30px;
 white-space:pre-wrap;
@@ -62,25 +62,25 @@ white-space:pre-wrap;
 #inputArea{
 display:flex;
 gap:12px;
-padding:16px;
+padding:18px;
 border-top:1px solid #222;
 }
 
 #input{
 flex:1;
-padding:18px;
+padding:20px;
 font-size:24px;
 background:#111;
 color:white;
 border:1px solid #333;
-border-radius:14px;
+border-radius:16px;
 }
 
 button{
-padding:18px;
+padding:20px;
 font-size:22px;
 border:none;
-border-radius:14px;
+border-radius:16px;
 cursor:pointer;
 background:white;
 color:black;
@@ -101,11 +101,10 @@ color:black;
 <script>
 
 /* =========================
-   API KEYS
+   GEMINI API KEY
 ========================= */
 
-const GEMINI_KEY = "AIzaSyD3oiGFs1tEskJ6qY19wGdp5oR2VsWa6Hw";
-const GROQ_KEY = "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";
+const GEMINI_KEY = "AIzaSyCHuE6QMeLm6UE0JS0ywWimH60yC18vqzw";
 
 /* ========================= */
 
@@ -113,7 +112,7 @@ const chat =
 document.getElementById("chat");
 
 /* =========================
-   UI MESSAGE
+   ADD MESSAGE
 ========================= */
 
 function addMsg(role,text){
@@ -132,7 +131,7 @@ chat.scrollHeight;
 }
 
 /* =========================
-   GEMINI TEST
+   GEMINI CHAT
 ========================= */
 
 async function geminiChat(prompt){
@@ -149,25 +148,31 @@ headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-contents:[{
-parts:[{
+contents:[
+{
+parts:[
+{
 text: prompt
-}]
-}]
+}
+]
+}
+]
 })
 });
 
 const data = await res.json();
 
-/* DEBUG ERRORS */
+console.log(data);
+
+/* API ERROR */
 
 if(data.error){
 
 return {
 success:false,
 reason:
-"Gemini Error:\n\n" +
-(data.error.message || "Unknown Gemini issue")
+"❌ Gemini API Error\n\n" +
+data.error.message
 };
 
 }
@@ -182,7 +187,7 @@ if(!text){
 return {
 success:false,
 reason:
-"Gemini returned an empty response."
+"❌ Gemini returned empty response."
 };
 
 }
@@ -197,82 +202,7 @@ text
 return {
 success:false,
 reason:
-"Gemini crashed:\n\n" + err
-};
-
-}
-
-}
-
-/* =========================
-   GROQ TEST
-========================= */
-
-async function groqChat(prompt){
-
-try{
-
-const res = await fetch(
-"https://api.groq.com/openai/v1/chat/completions",
-{
-method:"POST",
-headers:{
-"Content-Type":"application/json",
-"Authorization":"Bearer " + GROQ_KEY
-},
-body:JSON.stringify({
-model:"llama-3.1-8b-instant",
-messages:[
-{
-role:"user",
-content:prompt
-}
-]
-})
-}
-);
-
-const data = await res.json();
-
-/* DEBUG ERRORS */
-
-if(data.error){
-
-return {
-success:false,
-reason:
-"Groq Error:\n\n" +
-(data.error.message || "Unknown Groq issue")
-};
-
-}
-
-/* SUCCESS */
-
-const text =
-data?.choices?.[0]?.message?.content;
-
-if(!text){
-
-return {
-success:false,
-reason:
-"Groq returned an empty response."
-};
-
-}
-
-return {
-success:true,
-text
-};
-
-}catch(err){
-
-return {
-success:false,
-reason:
-"Groq crashed:\n\n" + err
+"❌ Gemini crashed\n\n" + err
 };
 
 }
@@ -297,25 +227,24 @@ input.value = "";
 
 addMsg("user",text);
 
-/* =========================
-   TRY GEMINI FIRST
-========================= */
+addMsg(
+"ai",
+"🧠 Gemini thinking..."
+);
 
-addMsg("ai","Testing Gemini...");
-
-const gemini =
+const result =
 await geminiChat(text);
 
+/* remove thinking msg */
+chat.lastChild.remove();
+
 /* SUCCESS */
 
-if(gemini.success){
-
-chat.lastChild.remove();
+if(result.success){
 
 addMsg(
 "ai",
-"🧠 Gemini Success:\n\n" +
-gemini.text
+result.text
 );
 
 return;
@@ -324,56 +253,23 @@ return;
 
 /* FAILURE */
 
-chat.lastChild.remove();
-
 addMsg(
 "ai",
-gemini.reason
-);
-
-/* =========================
-   TRY GROQ
-========================= */
-
-addMsg(
-"ai",
-"Gemini failed.\n\nTrying Groq..."
-);
-
-const groq =
-await groqChat(text);
-
-/* SUCCESS */
-
-if(groq.success){
-
-chat.lastChild.remove();
-
-addMsg(
-"ai",
-"⚡ Groq Success:\n\n" +
-groq.text
-);
-
-return;
-
-}
-
-/* FAILURE */
-
-chat.lastChild.remove();
-
-addMsg(
-"ai",
-groq.reason
-);
-
-addMsg(
-"ai",
-"❌ BOTH APIS FAILED"
+result.reason
 );
 
 }
+
+/* ENTER KEY */
+
+document.getElementById("input")
+.addEventListener("keydown",(e)=>{
+
+if(e.key==="Enter"){
+send();
+}
+
+});
 
 </script>
 
