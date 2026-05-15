@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Nexaris Clean UI</title>
+<title>Nexaris Fixed UI</title>
 
 <style>
 
@@ -16,16 +16,16 @@ font-family:Arial;
 overflow:hidden;
 }
 
-/* FULL APP */
+/* APP */
 #app{
 display:flex;
 width:100vw;
 height:100vh;
 }
 
-/* SIDEBAR (TIGHTER = MORE CHAT SPACE) */
+/* SIDEBAR */
 #sidebar{
-width:260px;
+width:240px;
 background:#111;
 display:flex;
 flex-direction:column;
@@ -35,18 +35,16 @@ border-right:1px solid #222;
 overflow-y:auto;
 }
 
-/* MODE */
 #mode{
 padding:10px;
 background:#222;
 border-radius:8px;
 text-align:center;
 cursor:pointer;
-font-size:14px;
 color:white;
+font-size:14px;
 }
 
-/* BUTTON */
 button{
 padding:10px;
 font-size:14px;
@@ -57,7 +55,6 @@ background:white;
 color:black;
 }
 
-/* CHAT LIST */
 .chatItem{
 padding:10px;
 background:#222;
@@ -69,14 +66,14 @@ color:white;
 
 /* PERSONALIZATION */
 .sectionTitle{
-margin-top:8px;
+margin-top:6px;
 font-size:12px;
 color:#aaa;
 }
 
-#personaBox{
+textarea{
 width:100%;
-height:120px;
+height:110px;
 background:#222;
 color:white;
 border:none;
@@ -84,37 +81,38 @@ border-radius:8px;
 padding:8px;
 font-size:12px;
 resize:none;
+outline:none;
 }
 
-/* MAIN FULL WIDTH FEEL */
+/* MAIN AREA FIX */
 #main{
 flex:1;
 display:flex;
 flex-direction:column;
 height:100vh;
+overflow:hidden;
 }
 
-/* CHAT AREA = TRUE FULL SCREEN FEEL */
+/* CHAT (TAKES ALL AVAILABLE SPACE) */
 #chat{
 flex:1;
+min-height:0;
 overflow-y:auto;
-padding:20px 24px;
+padding:18px;
 display:flex;
 flex-direction:column;
-gap:14px;
-font-size:24px;
-line-height:1.6;
+gap:12px;
+font-size:22px;
+line-height:1.5;
 }
 
-/* USER ONLY (KEEP SIMPLE) */
+/* CLEAN TEXT ONLY */
 .user{
 align-self:flex-end;
-color:#fff;
+color:white;
 max-width:80%;
-text-align:left;
 }
 
-/* AI = NO BUBBLE, NO BOX, JUST TEXT */
 .ai{
 align-self:flex-start;
 color:#eaeaea;
@@ -122,27 +120,30 @@ max-width:95%;
 white-space:pre-wrap;
 }
 
-/* INPUT BAR */
+/* INPUT BAR (ALWAYS VISIBLE FIX) */
 #inputArea{
+flex-shrink:0;
 display:flex;
 gap:8px;
-padding:12px;
+padding:10px;
 border-top:1px solid #222;
 align-items:center;
+background:#000;
 }
 
 #input{
 flex:1;
-padding:14px;
+padding:12px;
 font-size:16px;
 background:#111;
 color:white;
 border:1px solid #333;
 border-radius:8px;
+outline:none;
 }
 
 img{
-max-width:280px;
+max-width:260px;
 border-radius:10px;
 margin-top:6px;
 }
@@ -170,8 +171,7 @@ display:none;
 <div class="sectionTitle">Personalization 🧠</div>
 
 <textarea id="personaBox"
-placeholder="Name: Nova 🌙
-Be friendly, use emojis, talk naturally."></textarea>
+placeholder="Be friendly, use emojis, talk naturally..."></textarea>
 
 </div>
 
@@ -208,14 +208,14 @@ let mode="friend";
 
 /* MODE */
 function toggleMode(){
-mode = mode==="friend"?"smart":mode==="smart"?"fast":"friend";
+mode=mode==="friend"?"smart":mode==="smart"?"fast":"friend";
 document.getElementById("mode").innerText=
 mode==="friend"?"Friend Mode 💖":
 mode==="smart"?"Smart Mode 🧠":
 "Fast Mode ⚡";
 }
 
-/* CHAT */
+/* NEW CHAT */
 function newChat(){
 const id="Chat "+(Object.keys(chats).length+1);
 chats[id]=[];
@@ -237,30 +237,6 @@ list.appendChild(d);
 });
 }
 
-/* CLEAN CHAT RENDER */
-function renderChat(){
-const chat=document.getElementById("chat");
-chat.innerHTML="";
-if(!chats[currentChat])chats[currentChat]=[];
-
-for(const m of chats[currentChat]){
-const d=document.createElement("div");
-d.className=m.role;
-
-if(m.type==="image"){
-const img=document.createElement("img");
-img.src=m.text;
-d.appendChild(img);
-}else{
-d.textContent=m.text;
-}
-
-chat.appendChild(d);
-}
-
-chat.scrollTop=chat.scrollHeight;
-}
-
 /* PERSONA */
 function getPersona(){
 return document.getElementById("personaBox").value||"";
@@ -270,8 +246,7 @@ return document.getElementById("personaBox").value||"";
 function buildPrompt(messages){
 
 let system=
-"Be a friendly assistant 🙂. Use emojis naturally. " +
-"Follow user personality if provided.";
+"Be a friendly assistant 🙂✨. Use emojis naturally. ";
 
 let persona=getPersona();
 if(persona.trim()){
@@ -288,7 +263,7 @@ return[
 /* OPENROUTER */
 async function openRouterChat(messages){
 
-const model= mode==="fast"
+const model=mode==="fast"
 ?"mistralai/mistral-7b-instruct:free"
 :"deepseek/deepseek-chat-v3-0324:free";
 
@@ -313,7 +288,7 @@ if(data.error)return{success:false,reason:data.error.message};
 const text=data?.choices?.[0]?.message?.content;
 
 return text?
-{success:true,text}:{success:false,reason:"empty"};
+{success:true,text}:{success:false};
 }
 
 /* GROQ */
@@ -335,15 +310,14 @@ messages:buildPrompt(messages)
 );
 
 const data=await res.json();
-if(data.error)return{success:false,reason:data.error.message};
 
 const text=data?.choices?.[0]?.message?.content;
 
 return text?
-{success:true,text}:{success:false,reason:"empty"};
+{success:true,text}:{success:false};
 }
 
-/* SEND */
+/* SEND (FIXED INPUT NEVER DISAPPEARS) */
 async function send(){
 
 const input=document.getElementById("input");
@@ -352,9 +326,16 @@ if(!text)return;
 
 input.value="";
 
-if(!chats[currentChat])chats[currentChat]=[];
+if(!currentChat){
+newChat();
+}
+
+if(!chats[currentChat]){
+chats[currentChat]=[];
+}
 
 chats[currentChat].push({role:"user",text});
+
 renderChat();
 
 const msgs=chats[currentChat].map(m=>({
@@ -363,19 +344,54 @@ content:m.text
 }));
 
 let r=await openRouterChat(msgs);
-if(!r.success)r=await groqChat(msgs);
 
-add("ai",r.success?r.text:"❌ FAILED\n\n"+r.reason);
+if(!r.success){
+r=await groqChat(msgs);
 }
 
-/* ADD */
+add("ai",r.success?r.text:"❌ FAILED\n\nerror");
+
+}
+
+/* CHAT RENDER */
+function renderChat(){
+
+const chat=document.getElementById("chat");
+chat.innerHTML="";
+
+if(!chats[currentChat])return;
+
+for(const m of chats[currentChat]){
+
+const d=document.createElement("div");
+d.className=m.role;
+
+if(m.type==="image"){
+const img=document.createElement("img");
+img.src=m.text;
+d.appendChild(img);
+}else{
+d.textContent=m.text;
+}
+
+chat.appendChild(d);
+
+}
+
+chat.scrollTop=chat.scrollHeight;
+
+}
+
+/* ADD MESSAGE */
 function add(role,text){
+
 const chat=document.getElementById("chat");
 const d=document.createElement("div");
 d.className=role;
 d.textContent=text;
 chat.appendChild(d);
 chat.scrollTop=chat.scrollHeight;
+
 }
 
 /* IMAGE */
@@ -383,6 +399,7 @@ document.getElementById("imgInput")
 .addEventListener("change",e=>{
 const f=e.target.files[0];
 if(!f)return;
+
 const r=new FileReader();
 r.onload=ev=>{
 if(!chats[currentChat])chats[currentChat]=[];
