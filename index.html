@@ -2,13 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Nexaris Pro</title>
+<title>Nexaris Stable</title>
 
 <style>
-
-/* =========================
-   GLOBAL BIG UI
-========================= */
 
 body{
 margin:0;
@@ -19,10 +15,7 @@ display:flex;
 height:100vh;
 }
 
-/* =========================
-   SIDEBAR
-========================= */
-
+/* SIDEBAR */
 #sidebar{
 width:300px;
 background:#111;
@@ -50,21 +43,14 @@ cursor:pointer;
 font-size:18px;
 }
 
-.chatItem:hover{
-background:#333;
-}
-
-/* =========================
-   MAIN CHAT
-========================= */
-
+/* MAIN */
 #main{
 flex:1;
 display:flex;
 flex-direction:column;
 }
 
-/* BIG CHAT TEXT */
+/* CHAT */
 #chat{
 flex:1;
 overflow-y:auto;
@@ -96,10 +82,7 @@ font-size:28px;
 white-space:pre-wrap;
 }
 
-/* =========================
-   INPUT AREA
-========================= */
-
+/* INPUT */
 #inputArea{
 display:flex;
 gap:10px;
@@ -132,6 +115,12 @@ color:black;
 display:none;
 }
 
+img{
+max-width:300px;
+border-radius:12px;
+margin-top:8px;
+}
+
 </style>
 </head>
 
@@ -140,9 +129,7 @@ display:none;
 <!-- SIDEBAR -->
 <div id="sidebar">
 
-<div id="mode" onclick="toggleMode()">
-Mode: SMART 🧠
-</div>
+<div id="mode" onclick="toggleMode()">Mode: SMART 🧠</div>
 
 <button onclick="newChat()">+ New Chat</button>
 
@@ -158,10 +145,12 @@ Mode: SMART 🧠
 <div id="inputArea">
 
 <button onclick="document.getElementById('imgInput').click()">📷</button>
+
 <input id="input" placeholder="Message Nexaris..." />
+
 <button onclick="send()">Send</button>
 
-<input type="file" id="imgInput" accept="image/*" />
+<input type="file" id="imgInput" accept="image/*">
 
 </div>
 
@@ -170,7 +159,7 @@ Mode: SMART 🧠
 <script>
 
 /* =========================
-   API KEYS
+   KEYS
 ========================= */
 
 const OPENROUTER_KEY = "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";
@@ -180,19 +169,17 @@ const GROQ_KEY = "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";
 
 let chats = {};
 let currentChat = null;
-let mode = "smart"; // smart or fast
+let mode = "smart";
 
 /* =========================
    MODE SWITCH
 ========================= */
 
 function toggleMode(){
-
-mode = (mode === "smart") ? "fast" : "smart";
+mode = mode === "smart" ? "fast" : "smart";
 
 document.getElementById("mode").innerText =
 "Mode: " + (mode === "smart" ? "SMART 🧠" : "FAST ⚡");
-
 }
 
 /* =========================
@@ -204,7 +191,6 @@ function newChat(){
 const id = "Chat " + (Object.keys(chats).length + 1);
 
 chats[id] = [];
-
 currentChat = id;
 
 renderChats();
@@ -212,11 +198,10 @@ renderChat();
 
 }
 
-/* RENAME CHAT */
+/* RENAME */
 function renameChat(oldName){
 
 const newName = prompt("Rename chat:");
-
 if(!newName) return;
 
 chats[newName] = chats[oldName];
@@ -256,13 +241,21 @@ list.appendChild(div);
 
 }
 
-/* CHAT RENDER */
+/* =========================
+   FIXED CHAT RENDER (IMPORTANT)
+========================= */
+
 function renderChat(){
 
 const chat = document.getElementById("chat");
 chat.innerHTML = "";
 
-(chats[currentChat] || []).forEach(m=>{
+if(!chats[currentChat]){
+chats[currentChat] = [];
+}
+
+/* rebuild full history ALWAYS */
+for(const m of chats[currentChat]){
 
 const div = document.createElement("div");
 div.className = m.role;
@@ -271,7 +264,6 @@ if(m.type === "image"){
 
 const img = document.createElement("img");
 img.src = m.text;
-img.style.maxWidth = "300px";
 div.appendChild(img);
 
 }else{
@@ -282,7 +274,7 @@ div.textContent = m.text;
 
 chat.appendChild(div);
 
-});
+}
 
 chat.scrollTop = chat.scrollHeight;
 
@@ -295,7 +287,7 @@ chat.scrollTop = chat.scrollHeight;
 async function openRouterChat(messages){
 
 const model =
-(mode === "smart")
+mode === "smart"
 ? "deepseek/deepseek-chat-v3-0324:free"
 : "mistralai/mistral-7b-instruct:free";
 
@@ -368,7 +360,7 @@ return text
 }
 
 /* =========================
-   SEND MESSAGE
+   SEND
 ========================= */
 
 async function send(){
@@ -400,18 +392,16 @@ addMsg("ai","Thinking...");
 
 let result = await openRouterChat(messages);
 
-/* fallback */
 if(!result.success){
 result = await groqChat(messages);
 }
 
 chat.lastChild.remove();
 
-if(result.success){
-addMsg("ai",result.text);
-}else{
-addMsg("ai","❌ BOTH FAILED\n\n"+result.reason);
-}
+addMsg(
+"ai",
+result.success ? result.text : "❌ FAILED\n\n" + result.reason
+);
 
 }
 
@@ -430,7 +420,7 @@ chat.scrollTop = chat.scrollHeight;
 }
 
 /* =========================
-   IMAGE UPLOAD (LOCAL DISPLAY)
+   IMAGE UPLOAD
 ========================= */
 
 document.getElementById("imgInput")
@@ -461,7 +451,7 @@ reader.readAsDataURL(file);
 
 });
 
-/* ENTER KEY */
+/* ENTER */
 document.getElementById("input")
 .addEventListener("keydown",(e)=>{
 if(e.key==="Enter") send();
